@@ -26,7 +26,7 @@ void _usage(
 {
 	fprintf(stderr, "Usage: %s [options]\n"
 			"\t-h\t\tDisplay this help\n"
-			"\t-S\t\tSet start address\n"
+			"\t-s\t\tSet start address\n"
 			"\t-r\t\tTreat stdin as raw bytecode (useful for ascii shellcode)\n"
 			"\t-p\t\tPass signals to child process (will allow child to kill itself via SIGSEGV, others)\n"
 			"\t-o <filename>\tSave generated exe to <filename>\n"
