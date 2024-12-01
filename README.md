@@ -20,6 +20,12 @@ It should work fine with `gcc`, albeit with a few more warnings.
 
 By default rappel is compiled with your native architecture. If you're on amd64 and want to target x86 you can do this with
 
+# Install the following
+```
+$ sudo dpkg --add-architecture i386
+$ sudo apt install gcc-multilib libedit-dev:i386
+```
+
 ```
 $ ARCH=x86 CC=clang make
 ```
