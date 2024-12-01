@@ -1,5 +1,6 @@
 #include <getopt.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include <sys/wait.h>
@@ -25,9 +26,10 @@ void _usage(
 {
 	fprintf(stderr, "Usage: %s [options]\n"
 			"\t-h\t\tDisplay this help\n"
+			"\t-S\t\tSet start address\n"
 			"\t-r\t\tTreat stdin as raw bytecode (useful for ascii shellcode)\n"
 			"\t-p\t\tPass signals to child process (will allow child to kill itself via SIGSEGV, others)\n"
-			"\t-s <filename>\tSave generated exe to <filename>\n"
+			"\t-o <filename>\tSave generated exe to <filename>\n"
 			"\t-x\t\tDisplay all registers (FP)\n"
 			"\t-v\t\tIncrease verbosity\n"
 			, argv0);
@@ -40,8 +42,9 @@ void _parse_opts(
 		int argc,
 		char **argv) {
 	int c;
+	unsigned long address;
 
-	while ((c = getopt(argc, argv, "s:dhrpvx")) != -1)
+	while ((c = getopt(argc, argv, "s:o:dhrpvx")) != -1)
 		switch (c) {
 			case 'h':
 				_usage(argv[0]);
@@ -52,7 +55,7 @@ void _parse_opts(
 			case 'r':
 				++options.raw;
 				break;
-			case 's':
+			case 'o':
 				options.savefile = optarg;
 				break;
 			case 'p':
@@ -63,6 +66,10 @@ void _parse_opts(
 				break;
 			case 'x':
 				++options.allregs;
+				break;
+			case 's':
+				address = strtoul(optarg, NULL, 16);
+				options.start = address;
 				break;
 			default:
 				exit(EXIT_FAILURE);
