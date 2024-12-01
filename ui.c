@@ -48,6 +48,7 @@ void _help(void)
 	printf(".allregs <on|off>        - toggle all register display\n");
 	printf(".read <address> [amount] - read <amount> bytes of data from address using ptrace [16]\n");
 	printf(".write <address> <data>  - write data starting at address using ptrace\n");
+	printf(".reset                   - resets rappel\n");
 }
 
 static
@@ -232,7 +233,7 @@ void interact(
 
 	el_set(el, EL_HIST, history, hist);
 
-	const pid_t child_pid = _gen_child();
+	pid_t child_pid = _gen_child();
 
 	verbose_printf("child process is %d\n", child_pid);
 
@@ -316,6 +317,35 @@ void interact(
 			if (strcasestr(line, "end")) {
 				in_block = 0;
 				end = 1;
+			}
+
+			if (strcasestr(line, "reset")) {
+				printf("Resetting child process...\n");
+
+				if (!child_died) {
+					ptrace_detatch(child_pid, &info);
+				}
+
+				// Clear state
+				memset(buf, 0, sizeof(buf));
+				buf_sz = 0;
+				end = 0;
+				in_block = 0;
+
+				// Clear history
+				history(hist, &ev, H_CLEAR);
+
+				// Create a new child process
+				child_pid = _gen_child();
+
+				// Relaunch the child process
+				ARCH_INIT_PROC_INFO(info);
+				ptrace_launch(child_pid);
+				ptrace_cont(child_pid, &info);
+				ptrace_reap(child_pid, &info);
+
+				display(&info);
+				continue;
 			}
 		}
 
