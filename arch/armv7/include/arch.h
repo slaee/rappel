@@ -56,6 +56,8 @@ struct proc_info_t {
 	struct user_vfpregs_armv7 old_vfpregs_struct;
 	struct iovec vfpregs;
 
+	int arch;
+
 	int sig;
 	long exit_code;
 };

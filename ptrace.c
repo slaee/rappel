@@ -45,17 +45,17 @@ int ptrace_write(
 {
 	int ret = 0;
 
-	for (unsigned ii = 0; ii < data_sz; ii += sizeof(long)) {
-		const uintptr_t addr = (uintptr_t)base + ii;
+	for (unsigned i = 0; i < data_sz; i += sizeof(long)) {
+		const uintptr_t addr = (uintptr_t)base + i;
 		unsigned long val = 0;
 
-		if (ii + sizeof(long) < data_sz) {
-			val = *(unsigned long *)(data + ii);
+		if (i + sizeof(long) < data_sz) {
+			val = *(unsigned long *)(data + i);
 		} else {
 			if (ptrace_read(child_pid, (const void *const) addr, &val, sizeof(val)))
 				ret = -1;
 
-			memcpy(&val, data + ii, data_sz - ii);
+			memcpy(&val, data + i, data_sz - i);
 		}
 
 		verbose_printf("ptrace_write: " REGFMT " = " REGFMT "\n", addr, val);
@@ -82,13 +82,13 @@ int ptrace_read(
 
 	unsigned long *const copy = xmalloc(alloc_sz);
 
-	for (unsigned ii = 0; ii < alloc_sz / sizeof(long); ++ii)  {
-		const uintptr_t addr = (uintptr_t)base + ii * sizeof(long);
+	for (unsigned i = 0; i < alloc_sz / sizeof(long); ++i)  {
+		const uintptr_t addr = (uintptr_t)base + i * sizeof(long);
 
 		verbose_printf("ptrace_read: " REGFMT "\n", addr);
 
 		errno = 0;
-		copy[ii] = ptrace(PTRACE_PEEKDATA, child_pid, addr, 0);
+		copy[i] = ptrace(PTRACE_PEEKDATA, child_pid, addr, 0);
 
 		if (errno) {
 			ret = -1;

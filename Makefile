@@ -26,7 +26,7 @@ CFLAGS_armv8 = -Dassemble=assemble_armv8 \
 		-DREGFMT=REGFMT64 -DARCH_INIT_PROC_INFO=ARMV8_INIT_PROC_INFO
 
 CFLAGS = -std=c11 -Wall -pedantic -Wno-gnu-empty-initializer $(CFLAGS_ARCH) $(CFLAGS_$(ARCH)) -O2 -fPIE -D_FORTIFY_SOURCE=2
-LDFLAGS =
+LDFLAGS = -lcapstone -lkeystone
 INC = -Iinclude/ -Iarch/$(ARCH)/include
 LIBS = -ledit
 

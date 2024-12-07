@@ -9,6 +9,9 @@
 
 #include <histedit.h>
 
+// #include <capstone/capstone.h>
+#include <keystone/keystone.h>
+
 #include "assemble.h"
 #include "common.h"
 #include "arch.h"
@@ -25,15 +28,84 @@ extern int exiting;
 
 static int in_block;
 
+static unsigned long current_address;
+
+size_t 
+get_instruction_length(const char *assembly_code) {
+    ks_engine *ks;
+    unsigned char *encode;
+    size_t size, count;
+    size_t length = 0;
+
+    // Initialize Keystone for x86 (32-bit)
+    if (ks_open(KS_ARCH_X86, KS_MODE_32, &ks) != KS_ERR_OK) {
+        fprintf(stderr, "Keystone initialization failed!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Assemble the provided assembly code
+    if (ks_asm(ks, assembly_code, 0, &encode, &size, &count) != KS_ERR_OK) {
+        fprintf(stderr, "Keystone assembly failed: %s\n", ks_strerror(ks_errno(ks)));
+        ks_close(ks);
+        return 0;
+    }
+
+    // Instruction length is the size of the generated machine code
+    length = size;
+
+    // Free resources
+    ks_free(encode);
+    ks_close(ks);
+
+    return length;
+}
+
+// size_t 
+// get_instruction_length(const unsigned char *buf, size_t size) {
+//     csh handle;
+//     cs_insn *insn;
+//     size_t len = 0;
+
+//     // Initialize Capstone disassembler for x86 (32-bit)
+//     if (cs_open(CS_ARCH_X86, CS_MODE_32, &handle) != CS_ERR_OK) {
+//         fprintf(stderr, "Capstone initialization failed!\n");
+//         exit(EXIT_FAILURE);
+//     }
+
+//     // Disassemble the instruction(s)
+//     size_t count = cs_disasm(handle, buf, size, 0x0, 1, &insn);
+//     if (count > 0) {
+//         // The length of the first instruction (in bytes)
+//         len = insn[0].size;
+//         cs_free(insn, count);
+//     } else {
+//         fprintf(stderr, "Failed to disassemble instruction\n");
+//     }
+
+//     cs_close(&handle);
+//     return len;
+// }
+
 static
 char const* _prompt(
 		EditLine *const e)
 {
-	if (in_block)
-		return "_> ";
-	else
-		return "> ";
+    static char prompt[64];  // Buffer to hold the prompt string
+
+    if (in_block) {
+        snprintf(prompt, sizeof(prompt), "...: ", current_address); // Use current_address for address
+    } else {
+        snprintf(prompt, sizeof(prompt), "0x%lx: ", current_address);
+    }
+
+    return prompt;
 }
+
+#ifdef ARCH_64BIT  // 64-bit architecture
+    #define GET_IP(info)  (info.regs_struct.rip)
+#else  // 32-bit architecture
+    #define GET_IP(info)  (info.regs_struct.eip)
+#endif
 
 static
 void _help(void)
@@ -248,6 +320,9 @@ void interact(
 
 	ptrace_launch(child_pid);
 	ptrace_cont(child_pid, &info);
+
+	current_address = options.start;
+
 	ptrace_reap(child_pid, &info);
 
 	display(&info);
@@ -331,6 +406,7 @@ void interact(
 				buf_sz = 0;
 				end = 0;
 				in_block = 0;
+				current_address = options.start;
 
 				// Clear history
 				history(hist, &ev, H_CLEAR);
@@ -341,10 +417,10 @@ void interact(
 				// Relaunch the child process
 				ARCH_INIT_PROC_INFO(info);
 				ptrace_launch(child_pid);
-				ptrace_cont(child_pid, &info);
+				ptrace_cont(child_pid, &info);				
 				ptrace_reap(child_pid, &info);
-
 				display(&info);
+
 				continue;
 			}
 		}
@@ -389,18 +465,21 @@ void interact(
 
 			ptrace_write(child_pid, (void *)options.start, code_buf, code_buf_sz);
 
-			free(code_buf);
-
 			ptrace_reset(child_pid, options.start);
-
 			ptrace_cont(child_pid, &info);
 
 			if (ptrace_reap(child_pid, &info)) {
 				child_died = 1;
 				break;
 			}
-
 			display(&info);
+
+			// Calculate instruction length using Capstone
+			size_t instr_len = get_instruction_length(code_buf);
+
+			// Update current_address
+			current_address += instr_len;
+			free(code_buf);
 		}
 	}
 

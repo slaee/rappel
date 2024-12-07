@@ -39,6 +39,8 @@ struct proc_info_t {
 	struct user_fpregs_armv8 old_fpregs_struct;
 	struct iovec fpregs;
 
+	int arch;
+
 	int sig;
 	long exit_code;
 };
